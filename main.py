@@ -5,6 +5,7 @@ from pfrl.experiments import train_agent_with_evaluation
 
 from actor import Actor
 from env import Env
+from llm import LLM
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
@@ -19,9 +20,19 @@ model = model.cuda()
 
 
 class MyEnv(Env):
-    def reward(self, input_item, predicted_list, finish):
-        reward = 0
-        return reward
+    def reward(self, input_question, prompt_pool_probs):
+        # get the max probs id and the corresponding tokenized action
+        max_probs_id = torch.argmax(prompt_pool_probs)
+        max_prompt_tokenized = self.tokenized_actions[max_probs_id]
+        max_prompt_str = self.actions_str[max_probs_id]
+        llm = LLM(model=self.model)
+        response = llm(input_question + " " + max_prompt_str, max_new_tokens=400)[0]
+        choices_prob = llm.score_choice(input_question + " " + max_prompt_str + response, ["True", "False"])
+        print(input_question + " " + max_prompt_str)
+        print(response)
+        print(choices_prob)
+        # if true is correct answer, and its id is 0
+        return choices_prob[0] / len(max_prompt_tokenized)
 
 
 env = MyEnv(model, tokenizer, observation_input=["hello world", "how are you", "I am fine"])

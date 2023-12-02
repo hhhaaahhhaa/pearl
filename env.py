@@ -18,23 +18,38 @@ class Env(gym.Env):
         self.model_param_dtype = next(model.parameters()).dtype
         self.current_input = ""
 
-        self.actions_str = ["Let’s work this out in a step by step way to be sure we have the right answer",
-                            "Retrieve information from search engine",
-                            "Break this down into smaller steps",
-                            "Take a deep breath and work on this problem step-by-step",
-                            "A little bit of arithmetic and a logical approach will help us quickly arrive the solution to this problem",
-                            "Question decomposition",
-                            "Answer Directly"]
+        self.actions_str = [
+            'Analyze the given information, break down the problem into manageable steps, apply suitable mathematical operations, and provide a clear, accurate, and concise solution, ensuring precise rounding if necessary. Consider all variables and carefully consider the problem’s context for an efficient solution.',
+            'Answer Directly.',
+            'Break this down.',
+            'Embrace challenges as opportunities for growth. Each obstacle you overcome brings you closer to success.',
+            'Let’s be realistic and think step by step.',
+            'Let’s solve this problem by splitting it into steps.',
+            'Let’s think about this logically.',
+            'Let’s think like a detective step by step.',
+            'Let’s think step by step.',
+            'Let’s work this out in a step by step way to be sure we have the right answer.',
+            'Let’s work through this problem step-by-step:',
+            'Question decomposition.',
+            'Remember that progress is made one step at a time. Stay determined and keep moving forward.',
+            'Stay focused and dedicated to your goals. Your consistent efforts will lead to outstanding achievements.',
+            'Take a deep breath and work on this problem step-by-step.',
+            'Take a deep breath and work on this problem.',
+            'Take pride in your work and give it your best. Your commitment to excellence sets you apart.',
+            'This is very important to my career.',
+            'Write your answer and give me a confidence score between 0-1 for your answer.',
+            'You have to solve this problem, I am in trouble.',
+            "You'd better be sure."]
         self.tokenized_actions = [self.tokenizer.tokenize(i) for i in self.actions_str]
 
         self.reset()
 
     def step(self, observation_vector):
         predictions, done, max_pred = self._predict(observation_vector)
-        reward = self.reward(self.current_input, predictions, done)
+        reward = self.reward(self.current_input, predictions)
         return self.get_observation(self.current_input), reward, done, {"max_pred": max_pred}
 
-    def reward(self, input_item, predicted_list, done):
+    def reward(self, input_question, prompt_pool_probs):
         return 0
 
     def reset(self, input_text=None):
