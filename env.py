@@ -7,16 +7,19 @@ from torch import autocast
 
 
 class Env(gym.Env):
-    def __init__(self, model, tokenizer, observation_input=[]):
+    def __init__(self, model, tokenizer, datamodule):
         super().__init__()
 
         self.model = model
         self.tokenizer = tokenizer
-        self.observation_input = observation_input
+        self.observation_input = datamodule.train_dataset
         self.hidden_size = model.get_output_embeddings().weight.shape[-1]
         self.action_space = gym.spaces.Discrete(self.hidden_size)
         self.model_param_dtype = next(model.parameters()).dtype
         self.current_input = ""
+        self.current_output = ""
+        self.current_output_options = []
+        self.current_sample = None
 
         self.actions_str = [
             'Analyze the given information, break down the problem into manageable steps, apply suitable mathematical operations, and provide a clear, accurate, and concise solution, ensuring precise rounding if necessary. Consider all variables and carefully consider the problem’s context for an efficient solution.',
@@ -53,11 +56,20 @@ class Env(gym.Env):
         return 0
 
     def reset(self, input_text=None):
-        if input_text:
+        if input_text:  # not used
             self.current_input = input_text
+            self.current_output = "dummy1"
+            self.current_output_options = ["dummy1", "dummy2"]
         else:
-            self.current_input = random.choice(self.observation_input) if self.observation_input else ""
-        return self.get_observation(self.current_input)
+            sample = random.choice(self.observation_input)
+            self.current_sample = sample
+            self.current_input = sample["question"]
+            self.current_output = sample["answer"]
+            self.current_output_options = sample["options"]
+            res = self.get_observation(self.current_input)
+            print(res.shape, res.dtype, self.model.dtype)
+            input()
+        return res
 
     @autocast('cuda')
     def get_observation(self, input_text):
