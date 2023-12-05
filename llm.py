@@ -48,7 +48,7 @@ class LLM:
             conv.append_message(conv.roles[0], input_sent)
             conv.append_message(conv.roles[1], None)
             input_sent = conv.get_prompt()
-        tensor_input = self.tokenizer.encode(input_sent, return_tensors='pt').to(self.device)
+        tensor_input = self.tokenizer.encode(input_sent, return_tensors='pt').to(self.device).to(self.model.dtype)
         return tensor_input
 
     def __call__(self, input_sent,
@@ -95,7 +95,7 @@ class LLM:
         for label_sent in label_sents:
             with torch.inference_mode():
                 if self.encoder_decoder:
-                    label = self.tokenizer.encode(label_sent, return_tensors='pt').to(self.device)
+                    label = self.tokenizer.encode(label_sent, return_tensors='pt').to(self.device).to(self.model.dtype)
                     loss = self.model(input_ids=tensor_input, labels=label).loss
                     scores.append(-loss.item())
                 else:
@@ -103,16 +103,17 @@ class LLM:
                                                               add_special_tokens=False).to(self.device)
                     label_sent_tokens = self.tokenizer.encode(label_sent, return_tensors='pt',
                                                               add_special_tokens=False).to(self.device)
-                    concatenated = torch.cat([torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device),
-                                              input_sent_tokens,
-                                              label_sent_tokens,
-                                              torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device)], dim=-1)
+                    concatenated = torch.cat(
+                        [torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device),
+                         input_sent_tokens,
+                         label_sent_tokens,
+                         torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device)], dim=-1)
                     labels = torch.full_like(concatenated, -100).to(self.device)
                     labels[:, -label_sent_tokens.shape[1] - 1:] = torch.cat(
-                        [label_sent_tokens, torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device)],
+                        [label_sent_tokens,
+                         torch.tensor([[self.tokenizer.eos_token_id]]).to(self.device)],
                         dim=-1)
                     loss = self.model(concatenated, labels=labels).loss.item()
                     average_loss = loss / len(label_sent_tokens[0])
                     scores.append(-average_loss)
-
         return self.softmax(scores)

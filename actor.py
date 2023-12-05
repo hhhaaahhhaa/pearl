@@ -1,5 +1,6 @@
 import pfrl
 import torch
+from torch import autocast
 
 
 class Actor:
@@ -24,18 +25,7 @@ class Actor:
         self.top_k = top_k
         self.top_p = top_p
         self.optimizer = optimizer
-        self.converter = torch.nn.Linear(self.obs_size, self.obs_size)
-        transformer_encoder_layer = torch.nn.TransformerEncoderLayer(
-            d_model=self.obs_size,
-            nhead=8,
-            dim_feedforward=self.obs_size,
-            dropout=0.1
-        )
-        self.transformer_encoder = torch.nn.TransformerEncoder(
-            transformer_encoder_layer,
-            num_layers=3
-        )
-
+        self.converter = torch.nn.Linear(self.obs_size, self.obs_size).to(self.model.dtype)
         parents = [parent[0] for parent in model.named_children()]
         if 'transformer' in parents:  # gpt2/bloom:
             self.transformers_model = model.transformer
@@ -49,7 +39,6 @@ class Actor:
     def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=3e-6):
         policy = torch.nn.Sequential(
             self.converter,
-            self.transformer_encoder,
             pfrl.policies.GaussianHeadWithStateIndependentCovariance(
                 action_size=self.obs_size,
                 var_type="diagonal",
@@ -58,12 +47,12 @@ class Actor:
             ),
         )
         vf = torch.nn.Sequential(
-            torch.nn.Linear(self.obs_size, self.obs_size // 2),
-            torch.nn.Linear(self.obs_size // 2, self.obs_size // 4),
-            torch.nn.Linear(self.obs_size // 4, 1)
+            torch.nn.Linear(self.obs_size, self.obs_size // 2).to(self.model.dtype),
+            torch.nn.Linear(self.obs_size // 2, self.obs_size // 4).to(self.model.dtype),
+            torch.nn.Linear(self.obs_size // 4, 2).to(self.model.dtype)
         )
         model = pfrl.nn.Branched(policy, vf)
-        # model = model.to(dtype=self.env.model_param_dtype)
+        model = model.to(dtype=self.env.model_param_dtype)
         if isinstance(self.optimizer, str):
             if self.optimizer.lower() == 'adamw':
                 opt = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -71,7 +60,6 @@ class Actor:
                 opt = torch.optim.SGD(model.parameters(), lr=lr)
         else:
             opt = self.optimizer
-        model = model.cuda()
         agent = pfrl.agents.PPO(
             model,
             opt,
