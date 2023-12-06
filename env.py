@@ -67,8 +67,8 @@ class Env(gym.Env):
             self.current_output = sample["answer"]
             self.current_output_options = sample["options"]
             res = self.get_observation(self.current_input)
-            print(res.shape, res.dtype, self.model.dtype)
-            input()
+            # print(res.shape, res.dtype, self.model.dtype)
+            # input()
         return res
 
     @autocast('cuda')

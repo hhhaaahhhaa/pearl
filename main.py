@@ -23,21 +23,19 @@ class MyEnv(Env):
         max_probs_id = torch.argmax(prompt_pool_probs)
         max_prompt_str = self.actions_str[max_probs_id]
 
-        # TODO: need debug
         # get intermediate action 
         if max_prompt_str in self.current_sample["prompt"]:  # use precomputed response
             response = self.current_sample["prompt"][max_prompt_str]
-            print("precomputed")
         else:
             response = llm(input_question + " " + max_prompt_str, max_new_tokens=10)[0]
             print("generated")
-        input()
         
         # 2nd pass to get score (0-1)
         choices_prob = llm.score_choice(input_question + " " + max_prompt_str + response, self.current_output_options)
         
         # score of correct answer divided by intermediate action's length
-        r = choices_prob[self.current_output_options.index(self.current_output)] / len(max_prompt_str)
+        # print(choices_prob, self.current_output_options.index(self.current_output), len(response))
+        r = choices_prob[self.current_output_options.index(self.current_output)] / len(response)
 
         return r
 
