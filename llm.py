@@ -42,7 +42,7 @@ class LLM:
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum(axis=0)
 
-    def input_encode(self, input_sent):
+    def input_encode(self, input_sent: str):
         if self.use_fastchat_model:
             conv = get_conversation_template(self.model_path)
             conv.append_message(conv.roles[0], input_sent)
@@ -51,7 +51,7 @@ class LLM:
         tensor_input = self.tokenizer.encode(input_sent, return_tensors='pt').to(self.device).to(self.model.dtype)
         return tensor_input
 
-    def __call__(self, input_sent,
+    def __call__(self, input_sent: str,
                  do_sample=False,
                  top_k=50,
                  top_p=0.95,
@@ -89,7 +89,7 @@ class LLM:
             predictions.append(prediction)
         return predictions
 
-    def score_choice(self, input_sent, label_sents):
+    def score_choice(self, input_sent: str, label_sents: list[str]):
         tensor_input = self.input_encode(input_sent)
         scores = []
         for label_sent in label_sents:
