@@ -60,7 +60,7 @@ def get_baselines(output_dir: str, debug=False):
     # No prompt baseline
     os.makedirs(f"{output_dir}/no_prompt", exist_ok=True)
     eval_agent = NoPromptAgent(llm)
-    acc, avg_length = evaluate(test_dataset, eval_agent)
+    acc, avg_length = evaluate(test_dataset, eval_agent, log_file=f"{output_dir}/no_prompt/no-prompt-log.pkl")
     with open(f"{output_dir}/no_prompt/results.txt", "w") as f:
         f.write(f"Acc: {acc * 100:.2f}%, Avg length: {avg_length:.2f}")
 
