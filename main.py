@@ -34,11 +34,11 @@ class MyEnv(Env):
         if max_prompt_str in self.current_sample["prompt"]:  # use precomputed response
             response = self.current_sample["prompt"][max_prompt_str]
         else:
-            response = llm(input_question + " " + max_prompt_str, max_new_tokens=10)[0]
-            print("generated")
+            response = llm("[INST] " + system_prompt + " " + input_question + " " + max_prompt_str + " [/INST]", max_new_tokens=512)[0]
+            print("generated")  # Should not happen
         
         # 2nd pass to get score (0-1)
-        final_input = "[INST] " + system_prompt + " " + input_question+ " [/INST] " + max_prompt_str + " " + response + " [INST] Give me your final answer. [/INST]"
+        final_input = "[INST] " + system_prompt + " " + input_question + " " + max_prompt_str + " [/INST] " + response + " [INST] Give me your final answer. [/INST]"
         choices_prob = llm.score_choice(final_input, self.current_output_options)
         
         # score of correct answer divided by intermediate action's length

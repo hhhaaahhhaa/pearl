@@ -27,6 +27,7 @@ class DataModule(object):
         for split_name in self.train_split_names:
             for instance in tqdm(self.ds[split_name]):
                 sample = {
+                    "split_name": split_name,
                     "question": instance["question"],
                     "options": instance["options"],
                     "answer": instance["answer"],
@@ -38,6 +39,7 @@ class DataModule(object):
         for split_name in self.test_split_names:
             for instance in tqdm(self.ds[split_name]):
                 sample = {
+                    "split_name": split_name,
                     "question": instance["question"],
                     "options": instance["options"],
                     "answer": instance["answer"],

@@ -7,10 +7,11 @@ from torch import autocast
 
 
 class Env(gym.Env):
-    def __init__(self, model, tokenizer, datamodule):
+    def __init__(self, model, tokenizer, datamodule, model_name="meta-llama/Llama-2-7b-chat-hf"):
         super().__init__()
 
         self.model = model
+        self.model_name = model_name  # default to llama-7b
         self.tokenizer = tokenizer
         self.observation_input = datamodule.train_dataset
         self.hidden_size = model.get_output_embeddings().weight.shape[-1]
@@ -48,10 +49,17 @@ class Env(gym.Env):
 
         self.reset()
 
+    def format_input_text(self, input_text: str) -> str:  # format text for llama2 only!
+        if "llama" in self.model_name or "Llama" in self.model_name:
+            system_prompt = "<<SYS>> You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. <</SYS>>"
+            return "[INST] " + system_prompt + " " + input_text + " [/INST]"
+        else:
+            return input_text
+
     def step(self, observation_vector):
         predictions, done, max_pred = self._predict(observation_vector)
         reward = self.reward(self.current_input, predictions)
-        return self.get_observation(self.current_input), reward, done, {"max_pred": max_pred}
+        return self.get_observation(self.format_input_text(self.current_input)), reward, done, {"max_pred": max_pred}
 
     def reward(self, input_question, prompt_pool_probs):
         return 0
@@ -69,10 +77,7 @@ class Env(gym.Env):
             self.current_input = sample["question"]
             self.current_output = sample["answer"]
             self.current_output_options = sample["options"]
-            res = self.get_observation(self.current_input)
-            # print(res.shape, res.dtype, self.model.dtype)
-            # input()
-        return res
+        return self.get_observation(self.format_input_text(self.current_input))
 
     @autocast('cuda')
     def get_observation(self, input_text):
@@ -93,7 +98,7 @@ class Env(gym.Env):
             observation_vector = torch.from_numpy(observation_vector).to(self.model.device)
         self.extract_sent_embedding(observation_vector)
         feats = torch.stack(
-            [self.get_observation(self.current_input + i) for i in self.actions_str])
+            [self.get_observation(self.format_input_text(self.current_input + " " + i)) for i in self.actions_str])
         feats = feats / feats.norm(dim=1, keepdim=True)
         logits = observation_vector @ feats.t()
         return logits, True, logits.argmax(dim=-1).item()

@@ -117,3 +117,11 @@ class LLM:
                     average_loss = loss / len(label_sent_tokens[0])
                     scores.append(-average_loss)
         return self.softmax(scores)
+
+    def format_input_text(self, input_text: str) -> str:
+        """ Format text for llama2 only! """
+        if "llama" in self.model_name or "Llama" in self.model_name:
+            system_prompt = "<<SYS>> You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. <</SYS>>"
+            return "[INST] " + system_prompt + " " + input_text + " [/INST]"
+        else:
+            return input_text

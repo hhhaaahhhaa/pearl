@@ -34,7 +34,7 @@ def evaluate(dataset, agent: BaseAgent, log_file: Optional[str]=None):
     return acc / n, total_length / n
 
 
-def get_baselines(output_dir: str, debug=False):
+def get_baselines(model_name: str, output_dir: str, debug=False):
     """ Baseline Evaluations """
     # Setup
     os.makedirs(output_dir, exist_ok=True)
@@ -46,12 +46,7 @@ def get_baselines(output_dir: str, debug=False):
     else:
         test_dataset = datamodule.test_dataset
 
-    # Debug with gpt2
-    if debug:
-        llm = LLM('gpt2')
-    else:
-        llm = LLM('meta-llama/Llama-2-7b-chat-hf')
-
+    llm = LLM(model_name)
     tokenizer = llm.tokenizer
     model = llm.model
     env = Env(model, tokenizer, datamodule=datamodule)  # use baseclass since evaluation will not use the reward function
@@ -89,7 +84,7 @@ def get_baselines(output_dir: str, debug=False):
         choices_prob = all_scores[k][i]["scores"]
         label = sample["options"].index(sample["answer"])
         acc += (np.argmax(choices_prob).item() == label)
-        total_length += len(response)
+        total_length += len(llm.tokenizer.tokenize(response))
     with open(f"{output_dir}/random/results.txt", "w") as f:
         f.write(f"Acc: {acc / len(test_dataset) * 100:.2f}%, Avg length: {total_length / len(test_dataset):.2f}")
     
@@ -103,12 +98,13 @@ def get_baselines(output_dir: str, debug=False):
             prompt = prompt_pool[k]
             response = sample["prompt"][prompt]
             choices_prob = all_scores[k][i]["scores"]
-            all_prompt_lengths.append(len(response))
+            actual_response_length = len(llm.tokenizer.tokenize(response))
+            all_prompt_lengths.append(actual_response_length)
             if np.argmax(choices_prob).item() == label:
                 temp_acc = 1
                 prompt = prompt_pool[k]
                 response = sample["prompt"][prompt]
-                correct_prompt_lengths.append(len(response))
+                correct_prompt_lengths.append(actual_response_length)
         acc += temp_acc
         if len(correct_prompt_lengths) == 0:  # none of prompt solve the question, therefore the best prompt can be any possible prompt
             correct_prompt_lengths = all_prompt_lengths
@@ -117,13 +113,12 @@ def get_baselines(output_dir: str, debug=False):
         total_max_length += max(correct_prompt_lengths)
     with open(f"{output_dir}/topline/results.txt", "w") as f:
         f.write(f"Acc: {acc / len(test_dataset) * 100:.2f}%, " + 
-                f"length: {total_length / len(test_dataset):.2f}, " + 
+                f"Avg length: {total_length / len(test_dataset):.2f}, " + 
                 f"Avg min length: {total_min_length / len(test_dataset):.2f}, " + 
                 f"Avg max length: {total_max_length / len(test_dataset):.2f}")
 
 
-# TODO: PEARL evaluation
-def eval_pearl(output_dir: str, debug=False):
+def eval_pearl(model_name: str, checkpoint_dir: str, output_dir: str, debug=False):
     """ Evaluation for pearl after training """
     # Setup
     os.makedirs(output_dir, exist_ok=True)
@@ -135,22 +130,27 @@ def eval_pearl(output_dir: str, debug=False):
     else:
         test_dataset = datamodule.test_dataset
 
-    # Debug with gpt2
-    if debug:
-        llm = LLM('gpt2')
-    else:
-        llm = LLM('meta-llama/Llama-2-7b-chat-hf')
-
+    llm = LLM(model_name)
     tokenizer = llm.tokenizer
     model = llm.model
-    env = Env(model, tokenizer, datamodule=datamodule)  # use baseclass since evaluation will not use the reward function
+    env = Env(model, tokenizer, datamodule=datamodule, model_name=model_name)  # use baseclass since evaluation will not use the reward function
     prompt_pool = env.actions_str
 
+    # Load checkpoint here
+    actor = Actor(env, model, tokenizer)
+    agent = actor.agent_ppo(update_interval=10, minibatch_size=1, epochs=20)
+    print(f"Load from {checkpoint_dir}...")
+    agent.load(checkpoint_dir)
+
     # Pearl Agent
-    # actor = Actor(env, model, tokenizer)
-    # agent = actor.agent_ppo(update_interval=10, minibatch_size=1, epochs=20)
+    eval_agent = PearlAgent(llm, actor, prompt_pool)
+    acc, avg_length = evaluate(test_dataset, eval_agent, log_file=f"{output_dir}/logs/log.pkl")
+    with open(f"{output_dir}/results.txt", "w") as f:
+        f.write(f"Acc: {acc * 100:.2f}%, Avg length: {avg_length:.2f}")
 
 
 if __name__ == "__main__":
-    # get_baselines("_baselines", debug=True)
-    get_baselines("_baselines", debug=False)
+    # get_baselines("gpt2", "_baselines1", debug=True)
+    # get_baselines("gpt2", "_baselines", debug=False)
+    eval_pearl("gpt2", "somewhere/1000_finish", "_exp-debug", debug=True)
+    # eval_pearl("meta-llama/Llama-2-7b-chat-hf", "_ray_checkpoints/prob_divided_by_token_length", "_exp/prob_divided_by_token_length")
