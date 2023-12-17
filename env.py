@@ -16,6 +16,7 @@ class Env(gym.Env):
         self.hidden_size = model.get_output_embeddings().weight.shape[-1]
         self.action_space = gym.spaces.Discrete(self.hidden_size)
         self.model_param_dtype = next(model.parameters()).dtype
+        self.current_sample_idx = 0
         self.current_input = ""
         self.current_output = ""
         self.current_output_options = []
@@ -61,7 +62,9 @@ class Env(gym.Env):
             self.current_output = "dummy1"
             self.current_output_options = ["dummy1", "dummy2"]
         else:
-            sample = random.choice(self.observation_input)
+            # sample = random.choice(self.observation_input)
+            self.current_sample_idx = random.randrange(0, len(self.observation_input))
+            sample = self.observation_input[self.current_sample_idx]
             self.current_sample = sample
             self.current_input = sample["question"]
             self.current_output = sample["answer"]
