@@ -12,9 +12,16 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
 
 import torch
 
+import csv
+import wandb
+import os
+
 llm = LLM('meta-llama/Llama-2-7b-chat-hf')
 # llm = LLM('gpt2')
 
+system_prompt = "<<SYS>> You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. <</SYS>>"
+
+training_logs = []
 
 class MyEnv(Env):
 
@@ -31,11 +38,50 @@ class MyEnv(Env):
             print("generated")
         
         # 2nd pass to get score (0-1)
-        choices_prob = llm.score_choice(input_question + " " + max_prompt_str + response, self.current_output_options)
+        final_input = "[INST] " + system_prompt + " " + input_question+ " [/INST] " + max_prompt_str + " " + response + " [INST] Give me your final answer. [/INST]"
+        choices_prob = llm.score_choice(final_input, self.current_output_options)
         
         # score of correct answer divided by intermediate action's length
         # print(choices_prob, self.current_output_options.index(self.current_output), len(response))
-        r = choices_prob[self.current_output_options.index(self.current_output)] / len(response)
+        # r = choices_prob[self.current_output_options.index(self.current_output)] / len(response)
+        # r = min(r, 10000)
+
+        # reward 1
+        # r = choices_prob[self.current_output_options.index(self.current_output)] * 1000 - len(response)
+
+        # reward 2
+        # response_token = self.tokenizer(response)["input_ids"]
+        # response_token_length = len(response_token)
+        # r = choices_prob[self.current_output_options.index(self.current_output)] - response_token_length / 400
+
+        # reward 3
+        # r = choices_prob[self.current_output_options.index(self.current_output)]
+
+        response_token = self.tokenizer(response)["input_ids"]
+        response_token_length = len(response_token)
+
+        # new_reward_1
+        # 1 / response_token_length
+        r = 1 / response_token_length
+
+        # current_sample_idx, prompt_id, 
+        wandb.log({
+            "current_sample_idx": self.current_sample_idx,
+            "prompt_id": max_probs_id.item(),
+            "response_token_length": response_token_length,
+            "reward": r,
+            "correct_choice": self.current_output_options.index(self.current_output),
+            "choices_prob": choices_prob,
+            })
+        
+        training_logs.append([
+            self.current_sample_idx,
+            max_probs_id.item(),
+            response_token_length,
+            r,
+            self.current_output_options.index(self.current_output),
+            *choices_prob
+            ])
 
         return r
 
@@ -47,17 +93,42 @@ def main():
     actor = Actor(env, model, tokenizer)
     agent = actor.agent_ppo(update_interval=10, minibatch_size=1, epochs=20)
 
+    steps=50000
+    eval_n_steps=None
+    eval_n_episodes=300
+    train_max_episode_len=50
+    eval_interval=1000
+    outdir='new_reward_1_2'
+
+    wandb.init(
+        project="RL_final_training",
+        name=outdir,
+
+        config={
+            "steps": steps,
+            "eval_n_steps": eval_n_steps,
+            "eval_n_episodes": eval_n_episodes,
+            "train_max_episode_len": train_max_episode_len,
+            "eval_interval": eval_interval,
+            "outdir": outdir,
+        }
+    )
     train_agent_with_evaluation(
         agent,
         env,
-        steps=1000,
-        eval_n_steps=None,
-        eval_n_episodes=300,
-        train_max_episode_len=50,
-        eval_interval=10000,
-        outdir='somewhere',
+        steps=steps,
+        eval_n_steps=eval_n_steps,
+        eval_n_episodes=eval_n_episodes,
+        train_max_episode_len=train_max_episode_len,
+        eval_interval=eval_interval,
+        outdir=outdir,
     )
 
+    wandb.finish()
+    with open(os.path.join(outdir, "log.txt"), "w") as fout:
+        writer = csv.writer(fout)
+
+        writer.writerows(training_logs)
 
 if __name__ == "__main__":
     main()
