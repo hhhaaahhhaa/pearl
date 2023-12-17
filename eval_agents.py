@@ -3,6 +3,7 @@ import random
 
 from llm import LLM
 
+system_prompt = "<<SYS>> You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. <</SYS>>"
 
 class BaseAgent(object):
 
@@ -16,7 +17,9 @@ class NoPromptAgent(BaseAgent):
         self.llm = llm
 
     def eval(self, sample) -> dict:
-        choices_prob = self.llm.score_choice(sample["question"], sample["options"])
+        final_input = "[INST] " + system_prompt + " " + sample["question"] + " [/INST] [INST] Give me your final answer. [/INST]"
+        # choices_prob = self.llm.score_choice(sample["question"], sample["options"])
+        choices_prob = self.llm.score_choice(final_input, sample["options"])
         label = sample["options"].index(sample["answer"])
 
         return {
@@ -38,7 +41,8 @@ class FixPromptAgent(BaseAgent):
         else:
             response = self.llm(sample["question"] + " " + self.prompt, max_new_tokens=10)[0]
         
-        final_input = sample["question"] + " " + self.prompt + response
+        # final_input = sample["question"] + " " + self.prompt + response
+        final_input = "[INST] " + system_prompt + " " + sample["question"] + " [/INST] " + self.prompt + " " + response + " [INST] Give me your final answer. [/INST]"
         choices_prob = self.llm.score_choice(final_input, sample["options"])
         label = sample["options"].index(sample["answer"])
 
@@ -63,7 +67,8 @@ class RandomPromptAgent(BaseAgent):
         else:
             response = self.llm(sample["question"] + " " + prompt, max_new_tokens=10)[0]
         
-        final_input = sample["question"] + " " + prompt + response
+        # final_input = sample["question"] + " " + prompt + response
+        final_input = "[INST] " + system_prompt + " " + sample["question"] + " [/INST] " + prompt + " " + response + " [INST] Give me your final answer. [/INST]"
         choices_prob = self.llm.score_choice(final_input, sample["options"])
         label = sample["options"].index(sample["answer"])
 
