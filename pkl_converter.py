@@ -50,6 +50,7 @@ def old_to_new_json(input_dir):
             processed_data.append(data_item)
             
         v = dataset[split_name]
+        # for each prompt in prompt pool
         for idx in range(len(actions_str)):
             action_str = actions_str[idx]
             with open(f"{input_dir}/fix/logs/prompt-{idx}.pkl", 'rb') as f:
