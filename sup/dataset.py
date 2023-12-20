@@ -16,9 +16,21 @@ class LabelDataset(Dataset):
             with open(path, 'r') as f:
                 self.data.extend(json.load(f))
         random.seed(666)
+
+        self.filter_data()
+
+    def filter_data(self):
+        res = []
+        for sample in self.data:
+            if self.prompt_selection(sample) is not None:
+                res.append(sample)
+        self.data = res
     
     def __getitem__(self, index):
         best_prompt = self.prompt_selection(self.data[index])
+        if best_prompt is None:
+            best_prompt = random.choice(PROMPT_POOL)
+
         return {
             "sample": self.data[index],
             "label": PROMPT_POOL.index(best_prompt)
@@ -44,8 +56,6 @@ class LabelDataset(Dataset):
                     if best_length > response_length:
                         best_prompt = prompt
                         best_length = response_length
-        if best_prompt is None:
-            return random.choice(PROMPT_POOL)
         return best_prompt
 
     def collate_fn(self):
