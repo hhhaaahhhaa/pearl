@@ -171,3 +171,32 @@ class SupAgent(FlexiblePromptAgent):
     def prompt_selection(self, sample) -> str:
         pred_prompt_id = self.predictions[sample['question']]
         return PROMPT_POOL[pred_prompt_id]
+
+
+class PearlAgent(FlexiblePromptAgent):  # For future evalutation of trained model
+    def __init__(self, llm: LLM, actor: Actor, cache: str) -> None:
+        super().__init__(llm, cache)
+        self.actor = actor
+
+    def infer_all(self):
+        self.predictions = {}
+        for sample in tqdm(self.info):
+            pred_prompt_id = self.actor.predict(sample["question"])["max_pred"]
+            self.predictions[sample['question']] = pred_prompt_id
+            
+    def get_info(self, keys):
+        self.infer_all()
+        res = {}
+        if 'acc' in keys:
+            res['acc'] = self.get_acc()
+        if 'length' in keys:
+            res['length'] = self.get_length()
+        if 'entropy' in keys:
+            res['entropy'] = self.get_entropy()
+        if 'predictions' in keys:
+            res['predictions'] = self.predictions
+        return res
+    
+    def prompt_selection(self, sample) -> str:
+        pred_prompt_id = self.predictions[sample['question']]
+        return PROMPT_POOL[pred_prompt_id]
