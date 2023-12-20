@@ -42,12 +42,12 @@ for s in [
     "openbookqa_train",
     "strategyqa_train",
     "truthfulqa_train",
-    "hotpotqa_validation",
-    "openbookqa_test",
-    "strategyqa_test",
-    "truthfulqa_test",
+    # "hotpotqa_validation",
+    # "openbookqa_test",
+    # "strategyqa_test",
+    # "truthfulqa_test",
 ]:
-    data_list.extend(nlp2.read_json(f'{s}_processed_data.json'))
+    data_list.extend(nlp2.read_json(f'{s}_processed_data.json'))  # modify to local path
 q_key_pool = {}
 for i in data_list:
     q_key_pool[i['question']] = {'inst':i['inst'],'opt':i['options'],'ans':i['answer'],'ans_idx':i['options'].index(i['answer'])}
