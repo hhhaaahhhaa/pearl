@@ -5,8 +5,8 @@ import sys
 
 from pfrl.experiments import train_agent_with_evaluation
 
-from actor import Actor
-from env import Env
+from actor import Actor, Actor2
+from env import Env, Env2
 from llm import LLM
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='')
@@ -47,7 +47,7 @@ for s in [
     # "strategyqa_test",
     # "truthfulqa_test",
 ]:
-    data_list.extend(nlp2.read_json(f'{s}_processed_data.json'))  # modify to local path
+    data_list.extend(nlp2.read_json(f'_data/{s}_processed_data.json'))  # modify to local path
 q_key_pool = {}
 for i in data_list:
     q_key_pool[i['question']] = {'inst':i['inst'],'opt':i['options'],'ans':i['answer'],'ans_idx':i['options'].index(i['answer'])}
@@ -73,10 +73,35 @@ class MyEnv(Env):
         
         return r
 
+
+class MyEnv2(Env2):
+    def reward(self, input_question, max_probs_id):
+        global q_key_pool
+        max_prompt_str = self.actions_str[max_probs_id]
+        q_data = q_key_pool[input_question]
+        choices_prob = q_data['inst'][max_prompt_str]
+        label = self.current_output_options.index(self.current_output)
+
+        # To modify
+        r = choices_prob['score'][label]
+        # r = choices_prob['score'][label] * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+        # 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+        
+        wandb.log({
+            "prompt_id": max_probs_id,
+            "response_token_length": len(tokenizer.tokenize(choices_prob['step'])),
+            "reward": r,
+            "correct_choice": q_data['ans_idx'],
+            "choices_prob": choices_prob,
+        })
+        
+        return r
+
+
 tokenizer = llm.tokenizer
 model = llm.model
-env = MyEnv(model, tokenizer, datalist=data_list)
-actor = Actor(env, model, tokenizer,optimizer='sgd')
+env = MyEnv2(model, tokenizer, datalist=data_list)
+actor = Actor2(env, model, tokenizer,optimizer='sgd')
 agent = actor.agent_ppo(update_interval=50, minibatch_size=5, epochs=20, lr=5e-5)
 
 steps=30000
@@ -84,7 +109,7 @@ eval_n_steps=None
 eval_n_episodes=300
 train_max_episode_len=50
 eval_interval=1000
-outdir='reward_v2'
+outdir='rlfinal-debug'
 
 wandb.init(
     project="RL_final_training",

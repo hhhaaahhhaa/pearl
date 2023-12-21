@@ -96,19 +96,32 @@ class Adaptor(nn.Module):
     def __init__(self, d_in):
         super().__init__()
         self.converter = torch.nn.Linear(d_in, d_in)
-        self.head = pfrl.policies.GaussianHeadWithStateIndependentCovariance(
-            action_size=PROMPT_POOL,
-            var_type="diagonal",
-            var_func=lambda x: torch.exp(2 * x),  # Parameterize log std
-            var_param_init=0,  # log std = 0 => std = 1
+        self.head = pfrl.policies.SoftmaxCategoricalHead()
+
+    def forward(self, inputs):
+        x, feats = inputs
+        x = self.converter(x)
+        feats = feats / feats.norm(dim=-1, keepdim=True)
+        logits = x.unsqueeze(1) @ feats.transpose(-1, -2)
+        logits = logits.squeeze(1)
+        # print(logits.shape)
+        # input()
+        return self.head(logits)
+
+
+class VF(nn.Module):
+    def __init__(self, obs_size):
+        super().__init__()
+        self.obs_size = obs_size
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(self.obs_size, self.obs_size // 2),
+            torch.nn.Linear(self.obs_size // 2, self.obs_size // 4),
+            torch.nn.Linear(self.obs_size // 4, 2)
         )
 
-    def forward(self, x, feats):
-        x = self.converter(x)
-        feats = feats / feats.norm(dim=1, keepdim=True)
-        logits = x @ feats.t()
-
-        return self.head(logits)
+    def forward(self, inputs):
+        x, feats = inputs
+        return self.net(x)
 
 
 class Actor2:
@@ -145,11 +158,7 @@ class Actor2:
             raise ValueError('model not supported')
 
     def agent_ppo(self, update_interval=10, minibatch_size=3000, epochs=20, lr=3e-6):
-        vf = torch.nn.Sequential(
-            torch.nn.Linear(self.obs_size, self.obs_size // 2).to(self.model.dtype),
-            torch.nn.Linear(self.obs_size // 2, self.obs_size // 4).to(self.model.dtype),
-            torch.nn.Linear(self.obs_size // 4, 2).to(self.model.dtype)
-        )
+        vf = VF(self.obs_size)
         model = pfrl.nn.Branched(self.adaptor, vf)
         model = model.to(dtype=self.env.model_param_dtype)
         if isinstance(self.optimizer, str):

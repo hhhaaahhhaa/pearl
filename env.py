@@ -117,9 +117,8 @@ class Env2(gym.Env):
         self.reset()
 
     def step(self, action):
-        print(action)
         reward = self.reward(self.current_input, action)
-        return (self.get_observation(self.current_input), None), reward, True, {"max_pred": action}
+        return (self.get_observation(self.current_input), self.feats), reward, True, {"max_pred": action}
 
     def reward(self, input_question, prompt_pool_probs):
         return 0
@@ -136,10 +135,10 @@ class Env2(gym.Env):
             self.current_output = sample["answer"]
             self.current_output_options = sample["options"]
         
-        feats = torch.stack(
+        self.feats = torch.stack(
             [self.get_observation(f"Instruct: With Consider that {i}: {self.current_input}.") for i in self.actions_str])
         
-        return (self.get_observation(self.current_input), feats)
+        return (self.get_observation(self.current_input), self.feats)
 
     @autocast('cuda')
     def get_observation(self, input_text):
