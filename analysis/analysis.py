@@ -17,6 +17,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
 import matplotlib.pyplot as plt
 
+# from eval_agents import *
+
+# huggingface_hub.login(token="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")
 
 prompt_to_id = {
     "Analyze the given information, break down the problem into manageable steps, apply suitable mathematical operations, and provide a clear, accurate, and concise solution, ensuring precise rounding if necessary. Consider all variables and carefully consider the problem’s context for an efficient solution.": 0,
@@ -41,7 +44,6 @@ prompt_to_id = {
     'You have to solve this problem, I am in trouble.': 19,
     "You'd better be sure.": 20
 }
-
 
 def read_data(file_path):
 
@@ -300,40 +302,6 @@ def main_analysis_flip():
         analysis_flip(test_dataset, split_name, no_prompt_pickle_data_path, pickle_result_dir, output_result_dir, output_graph_dir)
 
 
-def plot_acc_token_length(data, output_graph_dir):
-
-    # Construct labels and values for each axis
-    labels = list(data.keys())
-    acc_values = [data[key]['acc'] for key in data]
-    length_values = [data[key]['length'] for key in data]
-
-    # Set the width of the bars
-    x = np.arange(len(labels))
-    width = 0.15
-
-    fig, ax1 = plt.subplots()
-
-    # Plot the first Y-axis (accuracy)
-    rects1 = ax1.bar(x - width/2, acc_values, width, label='Accuracy', color='tab:red')
-    ax1.set_xlabel('Prompt ID')
-    ax1.set_ylabel('Accuracy', color='tab:red')
-    ax1.tick_params(axis='y', labelcolor='tab:red')
-
-    # Plot the second Y-axis (Token Length)
-    ax2 = ax1.twinx()
-    rects2 = ax2.bar(x + width/2, length_values, width, label='Length', color='tab:blue')
-    ax2.set_ylabel('Token Length', color='tab:blue')
-    ax2.tick_params(axis='y', labelcolor='tab:blue')
-
-    # Add the labels
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(labels)
-
-    fig.tight_layout()
-
-    plt.savefig(f"{output_graph_dir}/acc_length.png")
-
-
 if __name__ == '__main__':
     
     # Analysis the best prompt for each sample.
@@ -342,10 +310,3 @@ if __name__ == '__main__':
 
     # Analysis the flip.
     main_analysis_flip()
-
-    # Plot the accuracy and length.
-    data = {"0": {"acc": 0.64, "length": 420}, "1": {"acc": 0.43, "length": 311},
-            "2": {"acc": 0.55, "length": 87}, "3": {"acc": 0.31, "length": 78}
-    }
-    output_graph_dir = "/work/u2619111/frank/rl_final/pearl/result_v3/graph_result"
-    plot_acc_token_length(data, output_graph_dir)
