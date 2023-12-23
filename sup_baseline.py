@@ -48,6 +48,8 @@ def main(args):
     print("Start training!")
     for t in range(args.n_epoch):
         losses = []
+        # acc
+        accs = []
         for i, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
             predictions = model(batch["samples"])  # B, n_cls
             loss = loss_func(predictions, batch["labels"].cuda())
@@ -57,13 +59,24 @@ def main(args):
             loss.backward()
             optimizer.step()
 
+            # train acc
+            acc = (predictions.argmax(dim=-1) == batch["labels"].cuda()).sum() / len(batch["labels"])
+            accs.append(acc.item())
+
+            if i == 0:
+                print(predictions.argmax(dim=-1))
+                print(batch["labels"])
+
             # log
             if args.log_step > 0 and (i + 1) % args.log_step == 0:
                 print(f'[Epoch {t+1}] Train/Loss: {sum(losses) / len(losses):.4f}')
                 losses = []
         
         if args.log_step < 0:
-            print(f'[Epoch {t+1}] Train/Loss: {sum(losses) / len(losses):.4f}')
+            # print(f'[Epoch {t+1}] Train/Loss: {sum(losses) / len(losses):.4f}')
+            final_loss = sum(losses) / len(losses)
+            final_acc = sum(accs) / len(accs)
+            print(f'[Epoch {t+1}] Train/Acc: {final_acc*100:.2f}%, Train/Loss: {final_loss:.4f}')
         losses = []
         
         # validation loop
@@ -94,11 +107,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=str, help="directory with data json paths")
-    parser.add_argument("--exp_name", type=str, help="experiment name")
+    parser.add_argument("--root", type=str, help="directory with data json paths", default="./_data")
+    parser.add_argument("--exp_name", type=str, help="experiment name", default="model2")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=0.0005)
-    parser.add_argument("--n_epoch", type=int, default=5, help="total run epoch")
+    parser.add_argument("--n_epoch", type=int, default=100, help="total run epoch")
     parser.add_argument("--val_epoch", type=int, default=1)
     parser.add_argument("--log_step", type=int, default=-1, help="log every n step")
     

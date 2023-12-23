@@ -182,7 +182,7 @@ class PearlAgent(FlexiblePromptAgent):  # For future evalutation of trained mode
         self.predictions = {}
         for sample in tqdm(self.info):
             pred_prompt_id = self.actor.predict(sample["question"])["max_pred"]
-            self.predictions[sample['question']] = pred_prompt_id
+            self.predictions[sample['question']] = int(pred_prompt_id)
             
     def get_info(self, keys):
         self.infer_all()

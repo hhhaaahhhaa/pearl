@@ -4,7 +4,8 @@ import json
 import os
 import nlp2
 from llm import LLM
-from env import Env
+from actor import Actor, Actor2
+from env import Env, Env2
 torch.set_default_device("cuda")
 
 from Define import TEST_SPLIT_NAMES, PROMPT_POOL
@@ -73,6 +74,8 @@ def main_rl(input_dir, output_dir, checkpoint_dir: str):
     # use baseclass since inference will not use the reward function, and put any dummy json here simply for initialization
     env = Env(model, tokenizer, datalist=nlp2.read_json(f"{input_dir}/hotpotqa_validation_processed_data.json"))
     actor = Actor(env, model, tokenizer)
+    # env = Env2(model, tokenizer, datalist=nlp2.read_json(f"{input_dir}/hotpotqa_validation_processed_data.json"))
+    # actor = Actor2(env, model, tokenizer)
     agent = actor.agent_ppo(update_interval=100, minibatch_size=5, epochs=20)
     print(f"Load from {checkpoint_dir}...")
     agent.load(checkpoint_dir)
@@ -88,4 +91,5 @@ def main_rl(input_dir, output_dir, checkpoint_dir: str):
 if __name__ == "__main__":
     # main("_data", "_data/analysis")
     # main_sup("_data", "_data/analysis/sup-debug", "sup-debug/checkpoints/3.ckpt")
-    main_rl("_data", "_data/analysis/reward_v2", "reward_v2/best")
+    main_rl("_data", "_data/analysis/reward_v5", "reward_v5/best")
+    # main_rl("_data", "_data/analysis/rlfinal-debug", "rlfinal-debug/best")

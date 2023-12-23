@@ -152,5 +152,6 @@ def eval_pearl(model_name: str, checkpoint_dir: str, output_dir: str, debug=Fals
 if __name__ == "__main__":
     # get_baselines("gpt2", "_baselines1", debug=True)
     # get_baselines("gpt2", "_baselines", debug=False)
-    eval_pearl("gpt2", "somewhere/1000_finish", "_exp-debug", debug=True)
+    get_baselines("meta-llama/Llama-2-7b-chat-hf", "_baselines", debug=False)
+    # eval_pearl("gpt2", "somewhere/1000_finish", "_exp-debug", debug=True)
     # eval_pearl("meta-llama/Llama-2-7b-chat-hf", "_ray_checkpoints/prob_divided_by_token_length", "_exp/prob_divided_by_token_length")

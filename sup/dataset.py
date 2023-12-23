@@ -19,6 +19,13 @@ class LabelDataset(Dataset):
 
         self.filter_data()
 
+        self.best_prompts = []
+        for i in range(len(self.data)):
+            best_prompt = self.prompt_selection(self.data[i])
+            if best_prompt is None:
+                best_prompt = random.choice(PROMPT_POOL)
+            self.best_prompts.append(best_prompt)
+
     def filter_data(self):
         res = []
         for sample in self.data:
@@ -27,9 +34,10 @@ class LabelDataset(Dataset):
         self.data = res
     
     def __getitem__(self, index):
-        best_prompt = self.prompt_selection(self.data[index])
-        if best_prompt is None:
-            best_prompt = random.choice(PROMPT_POOL)
+        # best_prompt = self.prompt_selection(self.data[index])
+        # if best_prompt is None:
+        #     best_prompt = random.choice(PROMPT_POOL)
+        best_prompt = self.best_prompts[index]
 
         return {
             "sample": self.data[index],

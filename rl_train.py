@@ -61,7 +61,17 @@ class MyEnv(Env):
         choices_prob = q_data['inst'][max_prompt_str]
 
         # To modify
-        r = 1/calculate_entropy(choices_prob['score']) * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+        # origin
+        # r = 1/calculate_entropy(choices_prob['score']) * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+
+        # reward v3
+        # r = choices_prob['score'][q_data['ans_idx']] * 10
+
+        # reward v4
+        # r = choices_prob['score'][q_data['ans_idx']] * 100 / len(tokenizer.tokenize(choices_prob['step']))
+
+        # reward v5
+        r = 10 / len(tokenizer.tokenize(choices_prob['step']))
         
         wandb.log({
             "prompt_id": max_probs_id,
@@ -74,34 +84,39 @@ class MyEnv(Env):
         return r
 
 
-class MyEnv2(Env2):
-    def reward(self, input_question, max_probs_id):
-        global q_key_pool
-        max_prompt_str = self.actions_str[max_probs_id]
-        q_data = q_key_pool[input_question]
-        choices_prob = q_data['inst'][max_prompt_str]
-        label = self.current_output_options.index(self.current_output)
+# class MyEnv2(Env2):
+#     def reward(self, input_question, max_probs_id):
+#         global q_key_pool
+#         max_prompt_str = self.actions_str[max_probs_id]
+#         q_data = q_key_pool[input_question]
+#         choices_prob = q_data['inst'][max_prompt_str]
+#         label = self.current_output_options.index(self.current_output)
 
-        # To modify
-        r = choices_prob['score'][label]
-        # r = choices_prob['score'][label] * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
-        # 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+#         # To modify
+#         # origin
+#         # r = 1/calculate_entropy(choices_prob['score']) * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+
+#         # reward v3
+#         r = choices_prob['score'][q_data['ans_idx']] * 10
+
+#         # r = choices_prob['score'][label] * 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
+#         # 1/len(tokenizer.tokenize(choices_prob['step'])) * 10
         
-        wandb.log({
-            "prompt_id": max_probs_id,
-            "response_token_length": len(tokenizer.tokenize(choices_prob['step'])),
-            "reward": r,
-            "correct_choice": q_data['ans_idx'],
-            "choices_prob": choices_prob,
-        })
+#         wandb.log({
+#             "prompt_id": max_probs_id,
+#             "response_token_length": len(tokenizer.tokenize(choices_prob['step'])),
+#             "reward": r,
+#             "correct_choice": q_data['ans_idx'],
+#             "choices_prob": choices_prob,
+#         })
         
-        return r
+#         return r
 
 
 tokenizer = llm.tokenizer
 model = llm.model
-env = MyEnv2(model, tokenizer, datalist=data_list)
-actor = Actor2(env, model, tokenizer,optimizer='sgd')
+env = MyEnv(model, tokenizer, datalist=data_list)
+actor = Actor(env, model, tokenizer,optimizer='sgd')
 agent = actor.agent_ppo(update_interval=50, minibatch_size=5, epochs=20, lr=5e-5)
 
 steps=30000
@@ -109,7 +124,7 @@ eval_n_steps=None
 eval_n_episodes=300
 train_max_episode_len=50
 eval_interval=1000
-outdir='rlfinal-debug'
+outdir='reward_v5'
 
 wandb.init(
     project="RL_final_training",

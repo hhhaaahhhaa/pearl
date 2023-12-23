@@ -93,12 +93,12 @@ def main():
     actor = Actor(env, model, tokenizer)
     agent = actor.agent_ppo(update_interval=10, minibatch_size=1, epochs=20)
 
-    steps=50000
+    steps=40000
     eval_n_steps=None
     eval_n_episodes=300
     train_max_episode_len=50
-    eval_interval=1000
-    outdir='new_reward_1_2'
+    eval_interval=2000
+    outdir='new_reward_1_3'
 
     wandb.init(
         project="RL_final_training",

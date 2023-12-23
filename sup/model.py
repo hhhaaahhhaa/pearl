@@ -35,12 +35,22 @@ class LinearProbe(nn.Module):
         # else:
         #     self.obs_size = self.model.config.hidden_size
 
+        # model1
         self.head = nn.Sequential(
             nn.Linear(self.obs_size, 256),
             nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
         )
+        # model2
+        # self.head = nn.Sequential(
+        #     nn.Linear(self.obs_size, 256),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.3),
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.3),
+        # )
         self.pooling = MeanPooling()
         self.head2 = nn.Linear(128, n_cls)
 

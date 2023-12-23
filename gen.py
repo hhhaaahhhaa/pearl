@@ -45,7 +45,7 @@ for k, v in dataset.items():
 
     if "full" in k:
         continue
-    if "train" not in k:
+    if "test" not in k:
         continue
     if "truthfulqa" not in k:
         continue
