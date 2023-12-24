@@ -4,8 +4,10 @@
 
 * For preparing the environment.
 ``` 
-pip install -r requirements. txt
+pip install -r requirements.txt
 ```
+
+* For preparing the data, down the preprocessed dataset, create and put into _data folder
 
 * For training, you can modify some parameters directly in the code.
 ``` python

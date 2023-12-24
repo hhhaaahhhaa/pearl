@@ -1,3 +1,7 @@
 pfrl@git+https://github.com/voidful/pfrl.git
 transformers
 fschat
+accelerate
+nlp2
+einops
+wandb
