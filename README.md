@@ -8,7 +8,7 @@
 pip install -r requirements.txt
 ```
 
-* For preparing the data, download the preprocessed dataset, create and put into _data folder.
+* For preparing the data, download the preprocessed dataset, rename the preprocessed_datasets folder into _data.
 
 
 * The original dataset is in:
