@@ -2,6 +2,11 @@
 ### Reinforcement Learning 2023 Final Project
 #### Group5
 
+* For preparing the environment.
+``` 
+pip install -r requirements. txt
+```
+
 * For training, you can modify some parameters directly in the code.
 ``` python
 
